@@ -95,4 +95,27 @@ class PharmacyController extends Controller
             return $response->jsonFailure($e->getMessage());
         }
     }
+
+    /**
+     * Calcula la Latitud y Longitud y retorna el modelo aproximado
+     *
+     * @param Request $request
+     * @param JsonResponseService $response
+     * @return JsonResponse
+     */
+    public function nearbyPharmacy(Request $request, JsonResponseService $response): JsonResponse|PharmacyResource
+    {
+        try {
+            $latitude = $request->input('lat');
+            $longitude = $request->input('lon');
+
+            $pharmacy = Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')
+                ->orderByRaw("ST_Distance_Sphere(POINT($longitude, $latitude), POINT(longitude, latitude)) ASC")
+                ->first();
+
+            return new PharmacyResource($pharmacy);
+        } catch (Exception $e) {
+            return $response->jsonFailure($e->getMessage());
+        }
+    }
 }
