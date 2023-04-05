@@ -11,6 +11,7 @@ use App\Services\JsonResponseService;
 use App\Http\Requests\PharmacyRequest;
 use App\Http\Resources\PharmacyResource;
 use App\Http\Resources\PharmacyCollection;
+use Illuminate\Support\Facades\Log;
 
 class PharmacyController extends Controller
 {
@@ -18,26 +19,38 @@ class PharmacyController extends Controller
      * Obtenemos una collecion de Pharmacy
      * Le damos formato a la respuesta JSON con PharmacyCollection
      *
-     * @return PharmacyCollection
+     * @param JsonResponseService $response
+     * @return PharmacyCollection|JsonResponse
      */
-    public function index(): PharmacyCollection
+    public function index(JsonResponseService $response): PharmacyCollection|JsonResponse
     {
-        $pharmacies = Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')->get();
+        try {
+            $pharmacies = Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')->get();
 
-        return PharmacyCollection::make($pharmacies);
+            return PharmacyCollection::make($pharmacies);
+        } catch (Exception $e) {
+            Log::debug($e->getMessage());
+            return $response->jsonFailure();
+        }
     }
 
     /**
      * Obtenemos un registro atraves de su ID para luego retornarlo
      *
      * @param integer $id
-     * @return PharmacyResource
+     * @param JsonResponseService $response
+     * @return PharmacyResource|JsonResponse
      */
-    public function show(int $id): PharmacyResource
+    public function show(int $id, JsonResponseService $response): PharmacyResource|JsonResponse
     {
-        $pharmacy = Pharmacy::findOrFail($id);
+        try {
+            $pharmacy = Pharmacy::findOrFail($id);
 
-        return new PharmacyResource($pharmacy);
+            return new PharmacyResource($pharmacy);
+        } catch (Exception $e) {
+            Log::debug($e->getMessage());
+            return $response->jsonFailure();
+        }
     }
 
     /**
@@ -50,10 +63,15 @@ class PharmacyController extends Controller
     public function store(PharmacyRequest $request, JsonResponseService $response): JsonResponse
     {
         try {
-            Pharmacy::create($request->validated());
-            return $response->jsonSuccess('creado');
+            $pharmacy = Pharmacy::create($request->validated());
+            return $response->jsonSuccess(
+                'creado',
+                'pharmacy',
+                new PharmacyResource($pharmacy)
+            );
         } catch (Exception $e) {
-            return $response->jsonFailure($e->getMessage());
+            Log::debug($e->getMessage());
+            return $response->jsonFailure();
         }
     }
 
@@ -71,16 +89,21 @@ class PharmacyController extends Controller
             $pharmacy = Pharmacy::findOrFail($id);
             $pharmacy->update($request->validated());
 
-            return $response->jsonSuccess('actualizado');
+            return $response->jsonSuccess(
+                'actualizado',
+                'pharmacy',
+                new PharmacyResource($pharmacy)
+            );
         } catch (Exception $e) {
-            return $response->jsonFailure($e->getMessage());
+            Log::debug($e->getMessage());
+            return $response->jsonFailure();
         }
     }
 
     /**
      * Elimina un registro en DB segun su ID
      *
-     * @param PharmacyRequest $request
+     * @param integer $id
      * @param JsonResponseService $response
      * @return JsonResponse
      */
@@ -92,30 +115,32 @@ class PharmacyController extends Controller
 
             return $response->jsonSuccess('eliminado');
         } catch (Exception $e) {
-            return $response->jsonFailure($e->getMessage());
+            Log::debug($e->getMessage());
+            return $response->jsonFailure();
         }
     }
 
     /**
-     * Calcula la Latitud y Longitud y retorna el modelo aproximado
+     * Calcula la Latitud y Longitud y una collection segun su ubicacion
      *
      * @param Request $request
      * @param JsonResponseService $response
-     * @return JsonResponse
+     * @return JsonResponse|PharmacyCollection
      */
-    public function nearbyPharmacy(Request $request, JsonResponseService $response): JsonResponse|PharmacyResource
+    public function nearbyPharmacy(Request $request, JsonResponseService $response): JsonResponse|PharmacyCollection
     {
         try {
             $latitude = $request->input('lat');
             $longitude = $request->input('lon');
 
-            $pharmacy = Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')
+            $pharmacies = Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')
                 ->orderByRaw("ST_Distance_Sphere(POINT($longitude, $latitude), POINT(longitude, latitude)) ASC")
-                ->first();
+                ->get();
 
-            return new PharmacyResource($pharmacy);
+            return PharmacyCollection::make($pharmacies);
         } catch (Exception $e) {
-            return $response->jsonFailure($e->getMessage());
+            Log::debug($e->getMessage());
+            return $response->jsonFailure();
         }
     }
 }
