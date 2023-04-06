@@ -7,6 +7,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 class JsonResponseService
 {
+    /**
+     * Retorna un mensaje de accion personalizada 
+     * de forma opcional puede agregarse una coleccion, objeto, etc
+     *
+     * @param string $action
+     * @param string|null $key
+     * @param mixed $value
+     * @return JsonResponse
+     */
     public function jsonSuccess(string $action, string $key = null, mixed $value = null): JsonResponse
     {
         return response()->json([
@@ -15,6 +24,11 @@ class JsonResponseService
         ], Response::HTTP_OK);
     }
 
+    /**
+     * Retorna un mensaje de accion fallida
+     *
+     * @return JsonResponse
+     */
     public function jsonFailure(): JsonResponse
     {
         return response()->json([

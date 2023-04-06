@@ -6,28 +6,45 @@ use Exception;
 use App\Models\Pharmacy;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use App\Services\JsonResponseService;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Requests\PharmacyRequest;
 use App\Http\Resources\PharmacyResource;
 use App\Http\Resources\PharmacyCollection;
-use Illuminate\Support\Facades\Log;
+use App\Http\Requests\NearbyPharmacyRequest;
 
 class PharmacyController extends Controller
 {
     /**
-     * Obtenemos una collecion de Pharmacy
-     * Le damos formato a la respuesta JSON con PharmacyCollection
+     * Calcula la Latitud y Longitud y retorna una collection segun su ubicacion
      *
+     * @param NearbyPharmacyRequest $request
      * @param JsonResponseService $response
-     * @return PharmacyCollection|JsonResponse
+     * @return JsonResponse|PharmacyCollection
      */
-    public function index(JsonResponseService $response): PharmacyCollection|JsonResponse
+    public function index(NearbyPharmacyRequest $request, JsonResponseService $response): JsonResponse|PharmacyCollection
     {
         try {
-            $pharmacies = Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')->get();
+            return $this->getPharmacies($request);
+        } catch (Exception $e) {
+            Log::debug($e->getMessage());
+            return $response->jsonFailure();
+        }
+    }
 
-            return PharmacyCollection::make($pharmacies);
+    /**
+     * Calcula la Latitud y Longitud y retorna una collection segun su ubicacion a 10 metros de distancia
+     *
+     * @param NearbyPharmacyRequest $request
+     * @param JsonResponseService $response
+     * @return JsonResponse|PharmacyCollection
+     */
+    public function getNearestPharmacy(NearbyPharmacyRequest $request, JsonResponseService $response): JsonResponse|PharmacyCollection
+    {
+        try {
+            return $this->getPharmacies($request, true);
         } catch (Exception $e) {
             Log::debug($e->getMessage());
             return $response->jsonFailure();
@@ -121,26 +138,30 @@ class PharmacyController extends Controller
     }
 
     /**
-     * Calcula la Latitud y Longitud y una collection segun su ubicacion
+     * obtiene la coleccion de Pharmacies
      *
-     * @param Request $request
-     * @param JsonResponseService $response
-     * @return JsonResponse|PharmacyCollection
+     * @param NearbyPharmacyRequest $request
+     * @param boolean|null $nearest
+     * @return PharmacyCollection
      */
-    public function nearbyPharmacy(Request $request, JsonResponseService $response): JsonResponse|PharmacyCollection
+    private function getPharmacies(NearbyPharmacyRequest $request, ?bool $nearest = null): PharmacyCollection
     {
-        try {
-            $latitude = $request->input('lat');
-            $longitude = $request->input('lon');
+        $latitude = $request->input('lat');
+        $longitude = $request->input('lon');
 
-            $pharmacies = Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')
+        $cacheKey = "pharmacies_{$latitude}_{$longitude}_{$nearest}";
+
+        $pharmacies = Cache::remember($cacheKey, 60, function () use ($latitude, $longitude, $nearest) {
+            return $nearest ?
+                Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')
+                ->whereRaw("ST_Distance_Sphere(POINT($longitude, $latitude), POINT(longitude, latitude)) <= 10")
+                ->orderByRaw("ST_Distance_Sphere(POINT($longitude, $latitude), POINT(longitude, latitude)) ASC")
+                ->get() :
+                Pharmacy::select('id', 'name', 'address', 'latitude', 'longitude', 'created_at')
                 ->orderByRaw("ST_Distance_Sphere(POINT($longitude, $latitude), POINT(longitude, latitude)) ASC")
                 ->get();
+        });
 
-            return PharmacyCollection::make($pharmacies);
-        } catch (Exception $e) {
-            Log::debug($e->getMessage());
-            return $response->jsonFailure();
-        }
+        return PharmacyCollection::make($pharmacies);
     }
 }

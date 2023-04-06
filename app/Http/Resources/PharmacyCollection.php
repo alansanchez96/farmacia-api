@@ -15,10 +15,7 @@ class PharmacyCollection extends ResourceCollection
     public function toArray(Request $request): array
     {
         return [
-            'data' => $this->collection,
-            'links' => [
-                'self' => route('pharmacy.index')
-            ]
+            'data' => $this->collection
         ];
     }
 }

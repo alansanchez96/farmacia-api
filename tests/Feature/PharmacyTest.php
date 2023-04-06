@@ -1,18 +1,21 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
 use Tests\TestCase;
 use App\Models\Pharmacy;
 use App\Services\PharmacyService;
 use App\Exceptions\PharmacyException;
+use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class PharmacyTest extends TestCase
 {
     public function testDistanciaCalculadaCorrectamente()
     {
+        $this->withoutExceptionHandling();
         // Se crea un Pharmacy
-        $pharmacy = new Pharmacy([
+        $pharmacy = Pharmacy::factory()->create([
             'name' => 'Pharmacy Test',
             'address' => 'Calle 123',
             'latitude' => 10,
@@ -33,10 +36,11 @@ class PharmacyTest extends TestCase
 
     public function testErrorCalculandoDistancia()
     {
+        $this->withoutExceptionHandling();
         $this->expectException(PharmacyException::class);
 
         // Se crea una Pharmacy sin latitud ni longitud
-        $pharmacy = new Pharmacy([
+        $pharmacy = Pharmacy::factory()->create([
             'name' => 'Pharmacy Test',
             'address' => 'Calle 123'
         ]);
