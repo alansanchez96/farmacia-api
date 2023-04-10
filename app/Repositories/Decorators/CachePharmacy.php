@@ -33,7 +33,7 @@ class CachePharmacy implements IPharmacy
         $longitude = $request->input('lon');
         $latitude = $request->input('lat');
 
-        $key = "pharmacies_{$latitude}_{$longitude}";
+        $key = "pharmacies_{$latitude}_{$longitude}_nearest";
 
         return Cache::rememberForever($key, fn () => $this->repository->getNearestCollection($request));
     }
