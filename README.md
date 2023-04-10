@@ -12,13 +12,13 @@
 composer install
 ```
 
+- **Configura tu archivo de variables de entorno (.env)**
+
 - **Ejecuta las migraciones con datos falsos**
 
 ```sh
 php artisan migrate --seed
 ```
-
-- **Configura tu archivo de variables de entorno (.env)**
 
 - **Correr el servidor**
 
