@@ -26,7 +26,7 @@ class PharmacyResource extends JsonResource
                 'created_at' => Carbon::parse($this->created_at)->format('d/m/Y'),
             ],
             'links' => [
-                'self' => route('pharmacy.show', $this->resource)
+                'self' => route('pharmacies.show', $this->resource)
             ]
         ];
     }

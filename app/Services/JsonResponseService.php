@@ -3,36 +3,42 @@
 namespace App\Services;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class JsonResponseService
 {
     /**
      * Retorna un mensaje de accion personalizada 
-     * de forma opcional puede agregarse una coleccion, objeto, etc
+     * De forma opcional puede agregarse una coleccion, objeto, etc como value
      *
      * @param string $action
-     * @param string|null $key
-     * @param mixed $value
+     * @param mixed|null $value
      * @return JsonResponse
      */
-    public function jsonSuccess(string $action, string $key = null, mixed $value = null): JsonResponse
+    public function jsonSuccess(string $action, mixed $value = null): JsonResponse
     {
-        return response()->json([
-            $key => $value,
-            'msg' => "Se ha {$action} satisfactoriamente."
-        ], Response::HTTP_OK);
+        $data = [
+            'message' => "Se ha {$action} satisfactoriamente.",
+            ($value === null) ?: 'data' => $value,
+        ];
+
+        return response()
+            ->json(array_filter($data), Response::HTTP_OK);
     }
 
     /**
-     * Retorna un mensaje de accion fallida
-     *
+     * Retorna un mensaje de error
+     * 
      * @return JsonResponse
      */
-    public function jsonFailure(): JsonResponse
+    public function jsonFailure(string $message): JsonResponse
     {
-        return response()->json([
-            'error' => 'Ha ocurrido un problema.'
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        Log::error('error: ' . $message);
+
+        return response()
+            ->json([
+                'error' => 'Ha ocurrido un error'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }

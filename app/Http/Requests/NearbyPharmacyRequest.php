@@ -22,8 +22,8 @@ class NearbyPharmacyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lat' => 'required|numeric',
-            'lon' => 'required|numeric'
+            'lat' => 'numeric|min:-90|max:90',
+            'lon' => 'numeric|min:-180|max:180'
         ];
     }
 }
